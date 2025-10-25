@@ -11,9 +11,12 @@ import { fileURLToPath } from 'url';
 import useSequelizeAuthState, { clearSessionData } from './utils.js';
 
 const app = express();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 app.set('json spaces', 2);
 
+// Middleware
 app.use((req, res, next) => {
 	res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
 	res.setHeader('Pragma', 'no-cache');
@@ -23,6 +26,7 @@ app.use((req, res, next) => {
 });
 
 app.use(cors());
+app.use(express.static(__dirname)); // Serve static files (HTML, CSS, JS)
 console.log('CORS enabled.');
 
 let PORT = process.env.PORT || 8000;
@@ -35,9 +39,6 @@ I won't ask you for your Session
 \`\`\`
 `;
 console.log('Message set:', message);
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 const uploadFolder = join(__dirname, 'uploads');
 if (!fs.existsSync(uploadFolder)) {
@@ -58,6 +59,11 @@ function generateAccessKey() {
 	return key;
 }
 const accessKey = generateAccessKey();
+
+// Serve HTML page
+app.get('/', (req, res) => {
+    res.sendFile(join(__dirname, 'index.html'));
+});
 
 app.get('/pair', async (req, res) => {
 	let phone = req.query.phone;
@@ -113,6 +119,11 @@ app.get('/session/:key', async (req, res) => {
 		accessKey: accessKey,
 		files: files,
 	});
+});
+
+// Health check endpoint for Render.com
+app.get('/health', (req, res) => {
+	res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
 async function getPairingCode(phone) {
@@ -218,9 +229,4 @@ const HOST = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost';
 
 app.listen(PORT, HOST, () => {
 	console.log(`Server running at:\nhttp://${HOST}:${PORT}`);
-});
-
-// Health check endpoint for Render.com
-app.get('/health', (req, res) => {
-	res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
 });
